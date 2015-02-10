@@ -1,0 +1,7 @@
+C:\Users\Jack\Documents\Visual Studio 2012\Projects\Library\ArtificialNeuralNetwork\bin\Debug\ArtificialNeuralNetwork.dll
+C:\Users\Jack\Documents\Visual Studio 2012\Projects\Library\ArtificialNeuralNetwork\bin\Debug\ArtificialNeuralNetwork.pdb
+C:\Users\Jack\Documents\Visual Studio 2012\Projects\Library\ArtificialNeuralNetwork\bin\Debug\Utilities.dll
+C:\Users\Jack\Documents\Visual Studio 2012\Projects\Library\ArtificialNeuralNetwork\bin\Debug\Utilities.pdb
+C:\Users\Jack\Documents\Visual Studio 2012\Projects\Library\ArtificialNeuralNetwork\obj\Debug\ArtificialNeuralNetwork.dll
+C:\Users\Jack\Documents\Visual Studio 2012\Projects\Library\ArtificialNeuralNetwork\obj\Debug\ArtificialNeuralNetwork.pdb
+C:\Users\Jack\Documents\Visual Studio 2012\Projects\Library\ArtificialNeuralNetwork\obj\Debug\ArtificialNeuralNetwork.csprojResolveAssemblyReference.cache
