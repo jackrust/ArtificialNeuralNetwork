@@ -7,7 +7,7 @@ namespace ArtificialNeuralNetwork
 {
     public class Dynamic:Neuron
     {
-        public static double MinLearningRate = 0.006125;
+        public static double MinLearningRate = 1.0 / Math.Pow(2.0, 8.0);
         public static double MaxLearningRate = 0.25;
         //TODO:Add momentum
         public double LearningRate = MaxLearningRate;
@@ -33,10 +33,13 @@ namespace ArtificialNeuralNetwork
 	     */
 	    public override void Backpropagate(double error) {
 		    //http://home.agh.edu.pl/~vlsi/AI/backp_t_en/backprop.html
+	        foreach (var d in Dendrites)
+	        {
+	            d.Neuron.Backpropagate(error*d.Weight);
+	        }
             foreach (var d in Dendrites)
             {
-			    d.Neuron.Backpropagate(error*d.Weight);
-                Reweight(d, error);
+	            Reweight(d, error);
             } 
 	    }
 	
@@ -75,7 +78,7 @@ namespace ArtificialNeuralNetwork
         public void HalveLearningRate()
         {
             if (Math.Round(LearningRate, 6) > Math.Round(MinLearningRate, 6))
-                LearningRate -= MinLearningRate;
+                LearningRate /= 2;
         }
 
         //TOTO: merge with below?

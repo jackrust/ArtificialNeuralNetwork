@@ -15,8 +15,8 @@ namespace ArtificialNeuralNetwork
             HoldBestSpiralOut,
         }
 
-        public static int DefaultMaxEpochs = 2000;
-        public static int DefaultMaxMinima = 250;
+        public static int DefaultMaxEpochs = 1250;
+        public static int DefaultMaxMinima = 150;
 	    public static double DefaultTargetError = 0.005;
 	    public double Inputs;
 	    public double Outputs;
@@ -104,7 +104,8 @@ namespace ArtificialNeuralNetwork
 	     */
         public void Train(List<List<double>> inputs, List<List<double>> targets, TrainingAlgorithm trainingAlgorithm = TrainingAlgorithm.HoldBest)
         {
-            switch (trainingAlgorithm)
+            TrainHoldBestInvestigate(inputs, targets);
+            /*switch (trainingAlgorithm)
             {
                 case (TrainingAlgorithm.Normal):
                     TrainNormal(inputs, targets);
@@ -121,7 +122,7 @@ namespace ArtificialNeuralNetwork
                 default:
                     TrainNormal(inputs, targets);
                     break;
-            }
+            }*/
         }
 
 
@@ -213,6 +214,58 @@ namespace ArtificialNeuralNetwork
                 }
             } while (Error > TargetError && minima < MaxMinima && Epochs < MaxEpochs);
             SetWeights(bestWeights);
+        }
+
+        public void TrainHoldBestInvestigate(List<List<double>> inputs, List<List<double>> targets)
+        {
+
+            Epochs = 0;
+            var minima = 0;
+            double minError = -1;
+            double maxError = -1;
+            double prevError = -1;
+            var log = new List<List<double>>();
+
+            var bestWeights = GetWeights();
+            do
+            {
+                Error = TrainEpoch(inputs, targets);
+                Epochs++;
+                minima++;
+
+                if (Error < minError || minError < 0)
+                {
+                    minima = 0;
+                    minError = Error;
+                    bestWeights = GetWeights();
+                }
+
+                if (Error > maxError)
+                {
+                    maxError = Error;
+                }
+
+                if (Error > prevError)
+                {
+                    AdjustLearningRateDown();
+                }
+                prevError = Error;
+                log.Add(new List<double>(){Epochs, minima, Error, minError, maxError});
+            } while (Error > TargetError && minima < MaxMinima && Epochs < MaxEpochs);
+            SetWeights(bestWeights);
+            RecordLog(log);
+        }
+
+        private static void RecordLog(IEnumerable<List<double>> log)
+        {
+            const string fileName = "Log.txt";
+            var lines = log.Select(l => String.Format("{0},{1},{2},{3},{4}", l[0], l[1], l[2], l[3], l[4])).ToList();
+            System.IO.StreamWriter file = new System.IO.StreamWriter(fileName);
+            foreach (var l in lines)
+            {
+                file.WriteLine(l);
+            }
+            file.Close();
         }
 
         private void AdjustLearningRateDown()

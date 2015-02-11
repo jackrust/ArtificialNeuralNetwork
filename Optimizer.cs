@@ -8,10 +8,10 @@ namespace ArtificialNeuralNetwork
 {
     public class Optimizer
     {
-        public const int UpperLimitLayers = 2;
+        public const int UpperLimitLayers = 1;
         public const int LowerLimitLayers = 1;
-        public const int UpperLimitNeuronsInLayer = 7;
-        public const int LowerLimitNeuronsInLayer = 4;
+        public const int UpperLimitNeuronsInLayer = 3;
+        public const int LowerLimitNeuronsInLayer = 3;
         public const int UpperLimitEpochs = 2000;
         public const int LowerLimitEpochs = 2000;
         public const double UpperLimitTargetError = 0.005;
@@ -23,7 +23,7 @@ namespace ArtificialNeuralNetwork
             var grapher = new StringBuilder();
             grapher.AppendLine("");
             grapher.AppendLine("Graph data:");
-            grapher.AppendLine("|success|time");
+            grapher.AppendLine("Layers|Neurons|Success|Time");
 
             for (var numLayers = LowerLimitLayers; numLayers < UpperLimitLayers + 1; numLayers++)
             {
