@@ -8,7 +8,7 @@ namespace ArtificialNeuralNetwork
     public class Dynamic:Neuron
     {
         public static double MinLearningRate = 1.0 / Math.Pow(2.0, 8.0);
-        public static double MaxLearningRate = 0.25;
+        public static double MaxLearningRate = 0.4;
         //TODO:Add momentum
         public double LearningRate = MaxLearningRate;
 
@@ -36,10 +36,7 @@ namespace ArtificialNeuralNetwork
 	        foreach (var d in Dendrites)
 	        {
 	            d.Neuron.Backpropagate(error*d.Weight);
-	        }
-            foreach (var d in Dendrites)
-            {
-	            Reweight(d, error);
+                Reweight(d, error);
             } 
 	    }
 	

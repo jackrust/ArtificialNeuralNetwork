@@ -11,7 +11,7 @@ namespace ArtificialNeuralNetwork
         public const int UpperLimitLayers = 1;
         public const int LowerLimitLayers = 1;
         public const int UpperLimitNeuronsInLayer = 3;
-        public const int LowerLimitNeuronsInLayer = 3;
+        public const int LowerLimitNeuronsInLayer = 1;
         public const int UpperLimitEpochs = 2000;
         public const int LowerLimitEpochs = 2000;
         public const double UpperLimitTargetError = 0.005;

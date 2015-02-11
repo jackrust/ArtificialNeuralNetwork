@@ -13,10 +13,11 @@ namespace ArtificialNeuralNetwork
             HoldBest,
             HoldBestZeroIn,
             HoldBestSpiralOut,
+            HoldBestNarrowLearning
         }
 
-        public static int DefaultMaxEpochs = 1250;
-        public static int DefaultMaxMinima = 150;
+        public static int DefaultMaxEpochs = 1500;
+        public static int DefaultMaxMinima = 50;
 	    public static double DefaultTargetError = 0.005;
 	    public double Inputs;
 	    public double Outputs;
@@ -119,6 +120,9 @@ namespace ArtificialNeuralNetwork
                 case (TrainingAlgorithm.HoldBestSpiralOut):
                     TrainHoldBestSpiralOut(inputs, targets);
                     break;
+                case (TrainingAlgorithm.HoldBestNarrowLearning):
+                    TrainHoldBestNarrowLearning(inputs, targets);
+                    break;
                 default:
                     TrainNormal(inputs, targets);
                     break;
@@ -216,9 +220,46 @@ namespace ArtificialNeuralNetwork
             SetWeights(bestWeights);
         }
 
-        public void TrainHoldBestInvestigate(List<List<double>> inputs, List<List<double>> targets)
+        public void TrainHoldBestNarrowLearning(List<List<double>> inputs, List<List<double>> targets)
         {
 
+            Epochs = 0;
+            var minima = 0;
+            double minError = -1;
+            double maxError = -1;
+            double prevError = -1;
+
+            var bestWeights = GetWeights();
+            do
+            {
+                Error = TrainEpoch(inputs, targets);
+                Epochs++;
+                minima++;
+
+                if (Error < minError || minError < 0)
+                {
+                    minima = 0;
+                    minError = Error;
+                    bestWeights = GetWeights();
+                }
+
+                if (Error > maxError)
+                {
+                    maxError = Error;
+                }
+
+                if (Error > prevError)
+                {
+                    AdjustLearningRateDown();
+                }
+                prevError = Error;
+            } while (Error > TargetError && minima < MaxMinima && Epochs < MaxEpochs);
+
+            SetWeights(bestWeights);
+        }
+
+        public void TrainHoldBestInvestigate(List<List<double>> inputs, List<List<double>> targets)
+        {
             Epochs = 0;
             var minima = 0;
             double minError = -1;
@@ -229,7 +270,7 @@ namespace ArtificialNeuralNetwork
             var bestWeights = GetWeights();
             do
             {
-                Error = TrainEpoch(inputs, targets);
+                Error = TrainEpoch(inputs, targets) / inputs.Count;
                 Epochs++;
                 minima++;
 
