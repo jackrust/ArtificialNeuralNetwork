@@ -8,9 +8,9 @@ namespace ArtificialNeuralNetwork
 {
     public class Optimizer
     {
-        public const int UpperLimitLayers = 1;
+        public const int UpperLimitLayers = 2;
         public const int LowerLimitLayers = 1;
-        public const int UpperLimitNeuronsInLayer = 3;
+        public const int UpperLimitNeuronsInLayer = 5;
         public const int LowerLimitNeuronsInLayer = 1;
         public const int UpperLimitEpochs = 2000;
         public const int LowerLimitEpochs = 2000;
@@ -23,7 +23,7 @@ namespace ArtificialNeuralNetwork
             var grapher = new StringBuilder();
             grapher.AppendLine("");
             grapher.AppendLine("Graph data:");
-            grapher.AppendLine("Layers|Neurons|Success|Time");
+            grapher.AppendLine("Layers|INeurons|Success|Time");
 
             for (var numLayers = LowerLimitLayers; numLayers < UpperLimitLayers + 1; numLayers++)
             {
@@ -76,5 +76,6 @@ namespace ArtificialNeuralNetwork
                Math.Round((successes / (double)testingData.Inputs.Count) * 100, 2),
                (double)stopWatch.ElapsedMilliseconds / 1000);
         }
+
     }
 }

@@ -17,7 +17,7 @@ namespace ArtificialNeuralNetwork
 
         /**
          * Extended Constructor
-         * @param inputs Vector<> of input Neurons
+         * @param inputs Vector<> of input INeurons
          */
 
         protected Neuron(IEnumerable<Neuron> inputs):this()
@@ -114,6 +114,22 @@ namespace ArtificialNeuralNetwork
             {
                 Dendrites[i].Weight = weights[i];
             }
+        }
+
+        public IEnumerable<NeuralPathway> ExtendPathway(NeuralPathway pathway)
+        {
+            var pathways = new List<NeuralPathway>();
+            if (Dendrites.Count <= 0)
+                return new List<NeuralPathway>() {pathway};
+            foreach (var d in Dendrites)
+            {
+                var path = pathway.Copy();
+                path.Path.Add(d.Neuron);
+                path.Weightings.Add(d.Weight);
+                var paths = d.Neuron.ExtendPathway(path);
+                pathways.AddRange(paths);
+            }
+            return pathways;
         }
     }
 }

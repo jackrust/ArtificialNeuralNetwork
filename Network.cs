@@ -27,7 +27,7 @@ namespace ArtificialNeuralNetwork
 	    public int Epochs;
 	    public double Error;
         public bool WeightToRecent = false;
-	    public List<Input> Neurons;
+	    public List<Input> INeurons;
         public List<List<Dynamic>> HLayers;
         public List<Dynamic> ONeurons;
 
@@ -58,7 +58,7 @@ namespace ArtificialNeuralNetwork
             TargetError = targetError;
             Epochs = epochs;
             Error = error;
-            Neurons = neurons;
+            INeurons = neurons;
             HLayers = hLayers;
             ONeurons = oNeurons;
         }
@@ -76,7 +76,7 @@ namespace ArtificialNeuralNetwork
 		
 		    //Load input values into the input neurons
 		    for(var i = 0; i < inputs.Count; i++)
-			    Neurons[i].Value = inputs[i];
+			    INeurons[i].Value = inputs[i];
 		
 		    return Run();
 	    }
@@ -187,10 +187,10 @@ namespace ArtificialNeuralNetwork
                     }
                 }
             } while ((Error < previousError) || (Error > TargetError && iterations < (MaxEpochs / 10) && Epochs < MaxEpochs) );
-            Neurons = network.Neurons;
+            INeurons = network.INeurons;
             HLayers = network.HLayers;
             ONeurons = network.ONeurons;
-            PlugIn(ONeurons, HLayers, Neurons);
+            PlugIn(ONeurons, HLayers, INeurons);
         }
 
         public void TrainHoldBestSpiralOut(List<List<double>> inputs, List<List<double>> targets)
@@ -295,16 +295,29 @@ namespace ArtificialNeuralNetwork
             } while (Error > TargetError && minima < MaxMinima && Epochs < MaxEpochs);
             SetWeights(bestWeights);
             RecordLog(log);
+            var rankings = RankInputs();
+            RecordRankings(rankings);
         }
 
         private static void RecordLog(IEnumerable<List<double>> log)
         {
             const string fileName = "Log.txt";
             var lines = log.Select(l => String.Format("{0},{1},{2},{3},{4}", l[0], l[1], l[2], l[3], l[4])).ToList();
-            System.IO.StreamWriter file = new System.IO.StreamWriter(fileName);
+            var file = new System.IO.StreamWriter(fileName);
             foreach (var l in lines)
             {
                 file.WriteLine(l);
+            }
+            file.Close();
+        }
+        private static void RecordRankings(Dictionary<string, double> rankings)
+        {
+
+            const string fileName = "Rankings.txt";
+            var file = new System.IO.StreamWriter(fileName);
+            foreach (var r in rankings)
+            {
+                file.WriteLine(r.Key + "," + r.Value);
             }
             file.Close();
         }
@@ -365,9 +378,9 @@ namespace ArtificialNeuralNetwork
 	     */
 	    public bool CreateInputs(int num){
 		    Inputs = num;
-            Neurons = new List<Input>();
+            INeurons = new List<Input>();
             for (int i = 0; i < num; i++)
-			    Neurons.Add(new Input("I"+(i+1), 0));
+			    INeurons.Add(new Input("I"+(i+1), 0));
 		
 		    return true;
 	    }
@@ -424,7 +437,7 @@ namespace ArtificialNeuralNetwork
             if (layer == 1)
             {
                 foreach (var h in HLayers[layer - 1])
-                    foreach (var i in Neurons)
+                    foreach (var i in INeurons)
                         h.AddDendrite(i);
             }
 		    //if this is the second+ layer, connect to previous hidden neurons
@@ -467,7 +480,7 @@ namespace ArtificialNeuralNetwork
             else
             {
                 foreach (var o in ONeurons)
-                    foreach (var i in Neurons)
+                    foreach (var i in INeurons)
                         o.AddDendrite(i);
             }
 		    return true;
@@ -533,8 +546,8 @@ namespace ArtificialNeuralNetwork
 	    {
 		    //Set names (in case not already set)
 		    String print = "";
-		    for(int i = 0; i < Neurons.Count(); i++)
-			    Neurons[i].Name = "I"+(i+1);
+		    for(int i = 0; i < INeurons.Count(); i++)
+			    INeurons[i].Name = "I"+(i+1);
 		    for(int i = 0; i < HLayers.Count(); i++)
 			    for(int j = 0; j < HLayers[i].Count(); j++)
 				    HLayers[i][j].Name = "H"+(i+1)+"."+(j+1);
@@ -579,7 +592,7 @@ namespace ArtificialNeuralNetwork
             s += "<targetError>" + TargetError + "</targetError>";
 
             s += "<iNeurons>";
-            foreach (var n in Neurons)
+            foreach (var n in INeurons)
             {
                 s += "<iNeuron>";
                 s += n.Stringify();
@@ -641,10 +654,10 @@ namespace ArtificialNeuralNetwork
         public static Network Copy(Network orig)
         {
             return new Network(orig.Inputs, orig.Outputs, orig.MaxEpochs, orig.TargetError, orig.Epochs, orig.Error,
-                Input.Copy(orig.Neurons), Dynamic.Copy(orig.HLayers), Dynamic.Copy(orig.ONeurons));
+                Input.Copy(orig.INeurons), Dynamic.Copy(orig.HLayers), Dynamic.Copy(orig.ONeurons));
         }
 
-        private List<double> GetWeights()
+        public List<double> GetWeights()
         {
             var weights = new List<double>();
             foreach (var h in HLayers.SelectMany(l => l))
@@ -658,7 +671,7 @@ namespace ArtificialNeuralNetwork
             return weights;
         }
 
-        private void SetWeights(List<double> weights)
+        public void SetWeights(List<double> weights)
         {
             var index = 0;
             foreach (var l in HLayers)
@@ -674,6 +687,44 @@ namespace ArtificialNeuralNetwork
                 o.SetWeights(weights.GetRange(index, o.Dendrites.Count()));
                 index += o.Dendrites.Count();
             }
+        }
+
+        public List<NeuralPathway> GetPathways()
+        {
+            var pathways = new List<NeuralPathway>();
+            foreach (var o in ONeurons)
+            {
+                var path = new NeuralPathway();
+                path.Path.Add(o);
+                path.Weightings.Add(1);
+                var paths = o.ExtendPathway(path);
+                pathways.AddRange(paths);
+            }
+            return pathways;
+        }
+
+        public Dictionary<string, double> RankInputs()
+        {
+            var rankings = new Dictionary<string, double>();
+            foreach (var i in INeurons)
+            {
+                foreach (var p in GetPathways().Where(p => p.Path.Any(n => String.Equals(n.Name, i.Name, StringComparison.CurrentCultureIgnoreCase))))
+                {
+                    if (rankings.ContainsKey(i.Name))
+                    {
+                        if (rankings[i.Name] > p.WeightingProduct())
+                        {
+                            rankings[i.Name] = p.WeightingProduct();
+                        }
+                    }
+                    else
+                    {
+                        rankings.Add(i.Name, p.WeightingProduct());
+                    }
+                    
+                }
+            }
+            return rankings;
         }
     }
 }
