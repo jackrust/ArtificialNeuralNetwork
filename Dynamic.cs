@@ -20,10 +20,17 @@ namespace ArtificialNeuralNetwork
             : base(dendrites, name, threshold) {}
 
 
-	    public override double GetOutput() {
-		    var sum = Dendrites.Aggregate<Dendrite, double>(0, (current, d) => current + (d.GetSignal()));
-	        return Function(sum);
-	    }
+        public override double GetOutput(NeuralPathway path = null)
+        {
+            if (path != null)
+            {
+                if (path.Path.Count(Equivelant) > 2)
+                    return 0;
+                path.Path.Add(this);
+            }
+            var sum = Dendrites.Aggregate<Dendrite, double>(0, (current, d) => current + (d.GetSignal(path)));
+            return Function(sum);
+        }
 
 	    /**
 	     * backpropagate
@@ -31,12 +38,20 @@ namespace ArtificialNeuralNetwork
 	     * re-weights input based on error.
 	     * @param error (double)
 	     */
-	    public override void Backpropagate(double error) {
+        public override void Backpropagate(double error, NeuralPathway path = null)
+        {
+            if (path != null)
+            {
+                if (path.Path.Count(Equivelant) > 2)
+                    return;
+                path.Path.Add(this);
+            }
+
 		    //http://home.agh.edu.pl/~vlsi/AI/backp_t_en/backprop.html
 	        foreach (var d in Dendrites)
 	        {
-	            d.Neuron.Backpropagate(error*d.Weight);
-                Reweight(d, error);
+                d.Neuron.Backpropagate(error * d.Weight, path);
+                Reweight(d, error, path);
             } 
 	    }
 	
@@ -46,8 +61,9 @@ namespace ArtificialNeuralNetwork
 	     * @param dendrite (Dendrite) to be reweighted
 	     * @param error (double)
 	     */
-	    private void Reweight(Dendrite dendrite, double error) {
-            var weight = dendrite.Weight + LearningRate * error * Derivative(GetOutput()) * dendrite.Neuron.GetOutput();
+        private void Reweight(Dendrite dendrite, double error, NeuralPathway path = null)
+        {
+            var weight = dendrite.Weight + LearningRate * error * Derivative(GetOutput(path)) * dendrite.Neuron.GetOutput(path);
 		    dendrite.Weight = weight;
 		
 	    }
@@ -58,7 +74,7 @@ namespace ArtificialNeuralNetwork
 	     * @return double result
 	     */
 	    protected double Function(double x) {
-		    var result = 1/(1 + Math.Exp(-x));
+		    var result = 1/(1 + Math.Exp(-x*1));
             return result;
 	    }
 	
@@ -68,7 +84,7 @@ namespace ArtificialNeuralNetwork
 	     * @return double result
 	     */
 	    protected double Derivative(double x) {
-		    var result =  Math.Exp(-x)/((1 + Math.Exp(-x))*(1 + Math.Exp(-x)));
+            var result = Math.Exp(-x) / ((1 + Math.Exp(-x * 1)) * (1 + Math.Exp(-x * 1)));
             return result;
 	    }
 

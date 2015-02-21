@@ -46,10 +46,12 @@
     <Compile Include="Data.cs" />
     <Compile Include="Dendrite.cs" />
     <Compile Include="Dynamic.cs" />
+    <Compile Include="InterconnectedNetwork.cs" />
+    <Compile Include="Network.cs" />
     <Compile Include="NeuralPathway.cs" />
     <Compile Include="Optimizer.cs" />
     <Compile Include="Input.cs" />
-    <Compile Include="Network.cs" />
+    <Compile Include="FeedForwardNetwork.cs" />
     <Compile Include="Neuron.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

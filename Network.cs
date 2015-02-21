@@ -1,55 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using Utilities;
 
 namespace ArtificialNeuralNetwork
 {
-    public class Network
+    public abstract class Network
     {
+
+        public static int DefaultMaxEpochs = 1500;
+        public static int DefaultMaxMinima = 50;
+        public static double DefaultTargetError = 0.005;
+        public int MaxEpochs = DefaultMaxEpochs;
+        public int MaxMinima = DefaultMaxMinima;
+        public double TargetError = DefaultTargetError;
+        public int Epochs;
+        public double Error;
+        public bool WeightToRecent = false;
+        public List<Input> INeurons;
+        public List<List<Dynamic>> HLayers;
+        public List<Dynamic> ONeurons;
+
         public enum TrainingAlgorithm
         {
             Normal,
             HoldBest,
             HoldBestZeroIn,
             HoldBestSpiralOut,
-            HoldBestNarrowLearning
+            HoldBestNarrowLearning,
+            HoldBestInvestigate
         }
-
-        public static int DefaultMaxEpochs = 1500;
-        public static int DefaultMaxMinima = 50;
-	    public static double DefaultTargetError = 0.005;
-	    public double Inputs;
-	    public double Outputs;
-        public int MaxEpochs = DefaultMaxEpochs;
-        public int MaxMinima = DefaultMaxMinima;
-        public double TargetError = DefaultTargetError;
-	    public int Epochs;
-	    public double Error;
-        public bool WeightToRecent = false;
-	    public List<Input> INeurons;
-        public List<List<Dynamic>> HLayers;
-        public List<Dynamic> ONeurons;
 
         public Network()
-	    {
-	    }
-
-        public Network(int inputsNo, IReadOnlyCollection<int> hiddenNos, int outputsNo)
-            : this()
         {
-            CreateInputs(inputsNo);
-            CreateHiddenLayers(hiddenNos.Count);
-            var layer = 1;
-            foreach (var h in hiddenNos)
-            {
-                CreateHiddenLayer(layer, h);
-                layer++;
-            }
-            CreateOutputs(outputsNo);
         }
 
-        public Network(double numInputs, double numOutputs, int maxEpochs, double targetError,
+        /*public Network(double numInputs, double numOutputs, int maxEpochs, double targetError,
             int epochs, double error, List<Input> neurons, List<List<Dynamic>> hLayers, List<Dynamic> oNeurons)
         {
             Inputs = numInputs;
@@ -61,7 +47,7 @@ namespace ArtificialNeuralNetwork
             INeurons = neurons;
             HLayers = hLayers;
             ONeurons = oNeurons;
-        }
+        }*/
 	
 	    /**
 	     * run
@@ -86,16 +72,7 @@ namespace ArtificialNeuralNetwork
 	     * Returns the outputs from the stored inputs
 	     * @return outputs, a List<double> of output values from 0-1
 	     */
-        public List<double> Run()
-        {
-            //If inputs and/or outputs aren't set up then bail now
-		    if(!InputsValid() || !OutputsValid())
-			    return null;
-		
-		    //Pull the output from the output neurons
-
-            return ONeurons.Select(o => o.GetOutput()).ToList();
-	    }
+        protected abstract List<double> Run();
 	
 	    /**
 	     * train
@@ -103,7 +80,7 @@ namespace ArtificialNeuralNetwork
 	     * @param inputs, List<List<double>> a list of input Lists
 	     * @param targets, List<List<double>> a list of corresponding target Lists
 	     */
-        public void Train(List<List<double>> inputs, List<List<double>> targets, TrainingAlgorithm trainingAlgorithm = TrainingAlgorithm.HoldBest)
+        public void Train(List<List<double>> inputs, List<List<double>> targets, TrainingAlgorithm trainingAlgorithm = TrainingAlgorithm.HoldBestInvestigate)
         {
             TrainHoldBestInvestigate(inputs, targets);
             /*switch (trainingAlgorithm)
@@ -114,14 +91,11 @@ namespace ArtificialNeuralNetwork
                 case (TrainingAlgorithm.HoldBest):
                     TrainHoldBest(inputs, targets);
                     break;
-                case (TrainingAlgorithm.HoldBestZeroIn):
-                    TrainHoldBestZeroIn(inputs, targets);
-                    break;
-                case (TrainingAlgorithm.HoldBestSpiralOut):
-                    TrainHoldBestSpiralOut(inputs, targets);
-                    break;
                 case (TrainingAlgorithm.HoldBestNarrowLearning):
                     TrainHoldBestNarrowLearning(inputs, targets);
+                    break;
+                case (TrainingAlgorithm.HoldBestInvestigate):
+                    TrainHoldBestInvestigate(inputs, targets);
                     break;
                 default:
                     TrainNormal(inputs, targets);
@@ -160,65 +134,6 @@ namespace ArtificialNeuralNetwork
             SetWeights(bestWeights);
         }
 
-        public void TrainHoldBestZeroIn(List<List<double>> inputs, List<List<double>> targets)
-        {
-            Epochs = 0;
-            double bestError = -1;
-            double previousError;
-            var iterations = 0;
-            var network = Copy(this);
-            do
-            {
-                previousError = Error;
-                Error = TrainEpoch(inputs, targets);
-                Epochs++;
-                iterations++;
-                if (Error < bestError || bestError < 0)
-                {
-                    iterations = 0;
-                    bestError = Error;
-                    network = Copy(this);
-                }
-                else
-                {
-                    if (Epochs % (MaxEpochs / 100) == 0)
-                    {
-                        AdjustLearningRateDown();
-                    }
-                }
-            } while ((Error < previousError) || (Error > TargetError && iterations < (MaxEpochs / 10) && Epochs < MaxEpochs) );
-            INeurons = network.INeurons;
-            HLayers = network.HLayers;
-            ONeurons = network.ONeurons;
-            PlugIn(ONeurons, HLayers, INeurons);
-        }
-
-        public void TrainHoldBestSpiralOut(List<List<double>> inputs, List<List<double>> targets)
-        {
-            Epochs = 0;
-            var minima = 0;
-            double bestError = -1;
-            var bestWeights = GetWeights();
-            do
-            {
-                Error = TrainEpoch(inputs, targets);
-                Epochs++;
-                minima++;
-                if (Error < bestError || bestError < 0)
-                {
-                    minima = 0;
-                    bestError = Error;
-                    bestWeights = GetWeights();
-                    AdjustLearningRateDown();
-
-                }
-                if(minima >= MaxMinima/2)
-                {
-                    AdjustLearningRateUp();
-                }
-            } while (Error > TargetError && minima < MaxMinima && Epochs < MaxEpochs);
-            SetWeights(bestWeights);
-        }
 
         public void TrainHoldBestNarrowLearning(List<List<double>> inputs, List<List<double>> targets)
         {
@@ -258,63 +173,25 @@ namespace ArtificialNeuralNetwork
             SetWeights(bestWeights);
         }
 
-        public void TrainHoldBestInvestigate(List<List<double>> inputs, List<List<double>> targets)
-        {
-            Epochs = 0;
-            var minima = 0;
-            double minError = -1;
-            double maxError = -1;
-            double prevError = -1;
-            var log = new List<List<double>>();
+        public abstract void TrainHoldBestInvestigate(List<List<double>> inputs, List<List<double>> targets);
 
-            var bestWeights = GetWeights();
-            do
-            {
-                Error = TrainEpoch(inputs, targets) / inputs.Count;
-                Epochs++;
-                minima++;
-
-                if (Error < minError || minError < 0)
-                {
-                    minima = 0;
-                    minError = Error;
-                    bestWeights = GetWeights();
-                }
-
-                if (Error > maxError)
-                {
-                    maxError = Error;
-                }
-
-                if (Error > prevError)
-                {
-                    AdjustLearningRateDown();
-                }
-                prevError = Error;
-                log.Add(new List<double>(){Epochs, minima, Error, minError, maxError});
-            } while (Error > TargetError && minima < MaxMinima && Epochs < MaxEpochs);
-            SetWeights(bestWeights);
-            RecordLog(log);
-            var rankings = RankInputs();
-            RecordRankings(rankings);
-        }
-
-        private static void RecordLog(IEnumerable<List<double>> log)
+        protected static void RecordLog(IEnumerable<List<double>> log)
         {
             const string fileName = "Log.txt";
             var lines = log.Select(l => String.Format("{0},{1},{2},{3},{4}", l[0], l[1], l[2], l[3], l[4])).ToList();
-            var file = new System.IO.StreamWriter(fileName);
+            var file = new StreamWriter(fileName);
             foreach (var l in lines)
             {
                 file.WriteLine(l);
             }
             file.Close();
         }
-        private static void RecordRankings(Dictionary<string, double> rankings)
+
+        protected static void RecordRankings(Dictionary<string, double> rankings)
         {
 
             const string fileName = "Rankings.txt";
-            var file = new System.IO.StreamWriter(fileName);
+            var file = new StreamWriter(fileName);
             foreach (var r in rankings)
             {
                 file.WriteLine(r.Key + "," + r.Value);
@@ -322,7 +199,7 @@ namespace ArtificialNeuralNetwork
             file.Close();
         }
 
-        private void AdjustLearningRateDown()
+        protected void AdjustLearningRateDown()
         {
             foreach (var h in HLayers.SelectMany(l => l))
             {
@@ -333,19 +210,9 @@ namespace ArtificialNeuralNetwork
                 o.HalveLearningRate();
             }
         }
-        private void AdjustLearningRateUp()
-        {
-            foreach (var h in HLayers.SelectMany(l => l))
-            {
-                h.LearningRate += (1 - h.LearningRate)/2;
-            }
-            foreach (var o in ONeurons)
-            {
-                o.LearningRate += (1 - o.LearningRate) / 2;
-            }
-        }
 
-        private double TrainEpoch(IReadOnlyList<List<double>> inputs, IReadOnlyList<List<double>> targets)
+
+        protected double TrainEpoch(IReadOnlyList<List<double>> inputs, IReadOnlyList<List<double>> targets)
         {
             Error = 0;
             //for each of the training cases
@@ -360,7 +227,8 @@ namespace ArtificialNeuralNetwork
                     var err = targets[i][j] - outputs[j];
 
                     //And backpropagate to train the network
-                    ONeurons[j].Backpropagate(err);
+                    Backpropagate(ONeurons[j], err);
+                    
                     //Store error for checking
                     Error = Error + Math.Abs(err);
                 }
@@ -368,7 +236,9 @@ namespace ArtificialNeuralNetwork
             return Error;
         }
 
-	    //Create
+        protected abstract void Backpropagate(Dynamic oNeuron, double err);
+
+        //Create
 	
 	    /**
 	     * createInputs
@@ -377,7 +247,6 @@ namespace ArtificialNeuralNetwork
 	     * @return true if the create was successful
 	     */
 	    public bool CreateInputs(int num){
-		    Inputs = num;
             INeurons = new List<Input>();
             for (int i = 0; i < num; i++)
 			    INeurons.Add(new Input("I"+(i+1), 0));
@@ -462,7 +331,6 @@ namespace ArtificialNeuralNetwork
 		    if(!InputsValid() || !HiddenLayersValid())
 			    return false;
 		
-		    Outputs = num;
             ONeurons = new List<Dynamic>();
 		
 		    //Create Layer
@@ -492,10 +360,9 @@ namespace ArtificialNeuralNetwork
 	     * inputsValid
 	     * @return true if input layer exists
 	     */
-	    private bool InputsValid()
+        protected bool InputsValid()
 	    {
-	        const double tolerance = 0.0001;
-	        return !(Math.Abs(Inputs) < tolerance);
+	        return INeurons.Count > 0;
 	    }
 
         /**
@@ -503,25 +370,22 @@ namespace ArtificialNeuralNetwork
 	     * @param inputs
 	     * @return true if the input layer can accept the given List
 	     */
-        private bool InputsValid(List<double> inputs)
+        protected bool InputsValid(List<double> inputs)
         {
-            const double tolerance = 0.0001;
-            if (Math.Abs(Inputs) < tolerance)
-			    return false;
-            return !(Math.Abs(inputs.Count - Inputs) > tolerance);
+            return inputs.Count == INeurons.Count;
         }
 	
 	    /**
 	     * hiddenLayersExist
 	     * @return true if hidden layers exist
 	     */
-	    private bool HiddenLayersExist(){return (HLayers.Any());}
+        protected bool HiddenLayersExist() { return (HLayers.Any()); }
 
 	    /**
 	     * hiddenLayersValid
 	     * @return true if hidden layers are sound
 	     */
-	    private bool HiddenLayersValid()
+        protected bool HiddenLayersValid()
 	    {
 	        return HLayers.All(layer => layer.All(neuron => neuron != null));
 	    }
@@ -530,10 +394,10 @@ namespace ArtificialNeuralNetwork
 	     * outputsValid
 	     * @return true if output layer exists
 	     */
-	    private bool OutputsValid()
+
+        protected bool OutputsValid()
 	    {
-            const double tolerance = 0.0001;
-            return !(Math.Abs(Outputs) < tolerance);
+            return ONeurons.Count > 0;
 	    }
 
         //IO
@@ -580,7 +444,7 @@ namespace ArtificialNeuralNetwork
 		    return print;
 	    }
 
-
+        /*
         public string Stringify()
         {
             var s = "";
@@ -626,8 +490,8 @@ namespace ArtificialNeuralNetwork
             s += "</oNeurons>";
             return s;
         }
-
-        public static Network Objectify(string str)
+        */
+        /*public static Network Objectify(string str)
         {
             var numInputs = Convert.ToInt32(Stringy.SplitOn(str, "numInputs")[0]);
             var numOutputs = Convert.ToInt32(Stringy.SplitOn(str, "numOutputs")[0]);
@@ -655,39 +519,11 @@ namespace ArtificialNeuralNetwork
         {
             return new Network(orig.Inputs, orig.Outputs, orig.MaxEpochs, orig.TargetError, orig.Epochs, orig.Error,
                 Input.Copy(orig.INeurons), Dynamic.Copy(orig.HLayers), Dynamic.Copy(orig.ONeurons));
-        }
+        }*/
 
-        public List<double> GetWeights()
-        {
-            var weights = new List<double>();
-            foreach (var h in HLayers.SelectMany(l => l))
-            {
-                weights.AddRange(h.GetWeights());
-            }
-            foreach (var o in ONeurons)
-            {
-                weights.AddRange(o.GetWeights());
-            }
-            return weights;
-        }
+        public abstract List<double> GetWeights();
 
-        public void SetWeights(List<double> weights)
-        {
-            var index = 0;
-            foreach (var l in HLayers)
-            {
-                foreach (var h in l)
-                {
-                    h.SetWeights(weights.GetRange(index, h.Dendrites.Count()));
-                    index += h.Dendrites.Count();
-                }
-            }
-            foreach (var o in ONeurons)
-            {
-                o.SetWeights(weights.GetRange(index, o.Dendrites.Count()));
-                index += o.Dendrites.Count();
-            }
-        }
+        public abstract void SetWeights(List<double> weights);
 
         public List<NeuralPathway> GetPathways()
         {

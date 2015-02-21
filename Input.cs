@@ -43,7 +43,8 @@ namespace ArtificialNeuralNetwork
 	     * Static INeurons return their value
 	     * @return double value
 	     */
-	    public override double GetOutput() {
+        public override double GetOutput(NeuralPathway path = null)
+        {
 		    return Value;
 	    }
 	
@@ -51,7 +52,7 @@ namespace ArtificialNeuralNetwork
 	     * backpropagate
 	     * Static neurons do not need to backpropagate
 	     */
-	    public override void Backpropagate(double error) {}
+	    public override void Backpropagate(double error, NeuralPathway path = null) {}
 
 
         public string Stringify()
@@ -99,6 +100,11 @@ namespace ArtificialNeuralNetwork
 
         public static Input Copy(Input input){
             return new Input(Dendrite.Copy(input.Dendrites), input.Name, input.Threshold, input.Value);
+        }
+
+        public new void AddDendrites(List<Neuron> dendrites)
+        {
+            //Inputs do not have dendrites
         }
 
     }

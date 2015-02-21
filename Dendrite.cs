@@ -22,13 +22,13 @@ namespace ArtificialNeuralNetwork
             Weight = weight;
         }
 
-        public double GetSignal()
+        public double GetSignal(NeuralPathway path = null)
         {
-            return GetWeightedOutput();
+            return GetWeightedOutput(path);
         }
-        public double GetWeightedOutput()
+        public double GetWeightedOutput(NeuralPathway path = null)
         {
-            return Weight * Neuron.GetOutput();
+            return Weight * Neuron.GetOutput(path);
         }
 
         public string Stringify()

@@ -58,14 +58,14 @@ namespace ArtificialNeuralNetwork
          * Abstract, all nodes must return an output
          * @return double value
          */
-        public abstract double GetOutput();
+        public abstract double GetOutput(NeuralPathway path = null);
 
         /**
          * backpropagate
          * all nodes must backpropagate errors
          * @param error (double)
          */
-        public abstract void Backpropagate(double error);
+        public abstract void Backpropagate(double error, NeuralPathway path = null);
 
         public static Neuron[][] Copy(List<List<Neuron>> input)
         {
@@ -91,6 +91,11 @@ namespace ArtificialNeuralNetwork
             return output;
         }
 
+        protected bool Equivelant(Neuron other)
+        {
+            return other.Name == Name;
+        }
+
         // Getters & Setters
         public void AddDendrite(Neuron dendrite) 
         {
@@ -99,6 +104,13 @@ namespace ArtificialNeuralNetwork
         public void AddDendrite(Neuron dendrite, double weight) 
         {
             Dendrites.Add(new Dendrite(dendrite, weight)); 
+        }
+        public void AddDendrites(List<Neuron> dendrites)
+        {
+            foreach (var d in dendrites.Where(d => !d.Equivelant(this)))
+            {
+                AddDendrite(d);
+            }
         }
 
         public List<double> GetWeights()
