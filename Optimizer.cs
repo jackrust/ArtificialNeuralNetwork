@@ -10,16 +10,18 @@ namespace ArtificialNeuralNetwork
     {
         public const int UpperLimitLayers = 1;
         public const int LowerLimitLayers = 1;
-        public const int UpperLimitNeuronsInLayer = 5;
-        public const int LowerLimitNeuronsInLayer = 5;
+        public const int UpperLimitNeuronsInLayer = 6;
+        public const int LowerLimitNeuronsInLayer = 6;
         public const int UpperLimitEpochs = 2000;
         public const int LowerLimitEpochs = 2000;
         public const double UpperLimitTargetError = 0.005;
         public const double LowerLimitTargetError = 0.005;
         public const double TargetErrorStep = 0.005;
+        public List<Network.TrainingAlgorithm> Algorithms;
 
-        public string Optimize(Data trainingData, Data testingData, Func<List<double>, List<double>, bool> successCondition)
+        public string Optimize(Data trainingData, Data testingData, Func<List<double>, List<double>, bool> successCondition, Func<List<double>, List<double>> deconvert)
         {
+            Algorithms = new List<Network.TrainingAlgorithm>() { Network.TrainingAlgorithm.HoldBestInvestigate };// Enum.GetValues(typeof(Network.TrainingAlgorithm)).Cast<Network.TrainingAlgorithm>())
             var grapher = new StringBuilder();
             grapher.AppendLine("");
             grapher.AppendLine("Graph data:");
@@ -33,10 +35,9 @@ namespace ArtificialNeuralNetwork
                     {
                         for (var err = LowerLimitTargetError; err < UpperLimitTargetError + 1; err++)
                         {
-                            foreach (var algorithm in new List<FeedForwardNetwork.TrainingAlgorithm>() { FeedForwardNetwork.TrainingAlgorithm.HoldBestInvestigate })// Enum.GetValues(typeof(Network.TrainingAlgorithm)).Cast<Network.TrainingAlgorithm>())
+                            foreach (var algorithm in Algorithms )
                             {
-                                grapher.AppendLine(RunTestFeedForward(trainingData, testingData, successCondition, numLayers, perLayer, algorithm));
-                                //grapher.AppendLine(RunTestInterconnected(trainingData, testingData, successCondition, numLayers, perLayer, algorithm));
+                                grapher.AppendLine(RunTestNetwork(trainingData, testingData, successCondition, deconvert, numLayers, perLayer, algorithm, false));
                                 Console.WriteLine(grapher.ToString());
                             }
                         }
@@ -46,7 +47,7 @@ namespace ArtificialNeuralNetwork
             return grapher.ToString();
         }
 
-        public static string RunTestFeedForward(Data trainingData, Data testingData, Func<List<double>, List<double>, bool> successCondition, int numLayers, int perLayer, FeedForwardNetwork.TrainingAlgorithm algorithm)
+        public static string RunTestNetwork(Data trainingData, Data testingData, Func<List<double>, List<double>, bool> successCondition, Func<List<double>, List<double>> deconvert, int numLayers, int perLayer, Network.TrainingAlgorithm algorithm, bool saveReport = true, bool feedforward = true)
         {
             //Create hidden layers
             var hidden = new List<int>();
@@ -57,8 +58,15 @@ namespace ArtificialNeuralNetwork
             }
 
             //Create Network
-            var network = new FeedForwardNetwork(trainingData.Inputs[0].Count, hidden, trainingData.Outputs[0].Count);
-            //New network with 5 inputs, One hidden layer of 2 neurons, 1 output
+            Network network;
+            if (feedforward)
+            {
+                network = new FeedForwardNetwork(trainingData.Inputs[0].Count, hidden, trainingData.Outputs[0].Count);
+            }
+            else
+            {
+                network = new InterconnectedNetwork(trainingData.Inputs[0].Count, perLayer, trainingData.Outputs[0].Count);
+            }
 
             //Start a stopwatch
             var stopWatch = new Stopwatch();
@@ -71,6 +79,11 @@ namespace ArtificialNeuralNetwork
             stopWatch.Stop();
 
             //Test
+
+            if (saveReport)
+            {
+                SaveReport(testingData, successCondition, deconvert, network);
+            }
             var successes = testingData.Inputs.Select(t => network.Run(t)).Where((result, i) => successCondition(result, testingData.Outputs[i])).Count();
 
             return String.Format("{0}, {1}|{2}|{3}", numLayers, perLayer,
@@ -78,28 +91,24 @@ namespace ArtificialNeuralNetwork
                (double)stopWatch.ElapsedMilliseconds / 1000);
         }
 
-        public static string RunTestInterconnected(Data trainingData, Data testingData, Func<List<double>, List<double>, bool> successCondition, int numLayers, int perLayer, FeedForwardNetwork.TrainingAlgorithm algorithm)
+        private static void SaveReport(Data testingData, Func<List<double>, List<double>, bool> successCondition, Func<List<double>, List<double>> deconvert, Network network)
         {
-            //Create Network
-            var network = new InterconnectedNetwork(trainingData.Inputs[0].Count, perLayer, trainingData.Outputs[0].Count);
-            //New network with 5 inputs, One hidden layer of 2 neurons, 1 output
+            var report = "";
+            for (var i = 0; i < testingData.Inputs.Count; i++)
+            {
+                var output = network.Run(testingData.Inputs[i]);
+                var sccss = successCondition(output, testingData.Outputs[i]) ? 1 : 0;
+                report = String.Format("{0}|i{1}|o{2}|t{3}|s|{4}\n", i,
+                    testingData.Inputs[i].Aggregate(report, (current, inpt) => current + ("|" + inpt)),
+                    deconvert(output).Aggregate(report, (current, otpt) => current + ("|" + otpt)),
+                    deconvert(testingData.Outputs[i]).Aggregate(report, (current, trgt) => current + ("|" + trgt)),
+                    sccss);
+            }
 
-            //Start a stopwatch
-            var stopWatch = new Stopwatch();
-            stopWatch.Start();
-
-            //Train the network
-            network.Train(trainingData.Inputs, trainingData.Outputs, algorithm);
-
-            //Stop the stopwatch
-            stopWatch.Stop();
-
-            //Test
-            var successes = testingData.Inputs.Select(t => network.Run(t)).Where((result, i) => successCondition(result, testingData.Outputs[i])).Count();
-
-            return String.Format("{0}, {1}|{2}|{3}", numLayers, perLayer,
-               Math.Round((successes / (double)testingData.Inputs.Count) * 100, 2),
-               (double)stopWatch.ElapsedMilliseconds / 1000);
+            using (var file = new System.IO.StreamWriter("report.txt"))
+            {
+                file.WriteLine(report);
+            }
         }
     }
 }

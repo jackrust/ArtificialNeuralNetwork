@@ -36,6 +36,43 @@ namespace ArtificialNeuralNetwork
             oNeuron.Backpropagate(err);
         }
 
+
+        public override void TrainHoldBestNarrowLearning(List<List<double>> inputs, List<List<double>> targets)
+        {
+            Epochs = 0;
+            var minima = 0;
+            double minError = -1;
+            double maxError = -1;
+            double prevError = -1;
+
+            var bestWeights = GetWeights();
+            do
+            {
+                Error = TrainEpoch(inputs, targets) / inputs.Count;
+                Epochs++;
+                minima++;
+
+                if (Error < minError || minError < 0)
+                {
+                    minima = 0;
+                    minError = Error;
+                    bestWeights = GetWeights();
+                }
+
+                if (Error > maxError)
+                {
+                    maxError = Error;
+                }
+
+                if (Error > prevError)
+                {
+                    AdjustLearningRateDown();
+                }
+                prevError = Error;
+            } while (Error > TargetError && minima < MaxMinima && Epochs < MaxEpochs);
+            SetWeights(bestWeights);
+        }
+
         public override void TrainHoldBestInvestigate(List<List<double>> inputs, List<List<double>> targets)
         {
             Epochs = 0;

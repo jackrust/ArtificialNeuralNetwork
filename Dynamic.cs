@@ -74,7 +74,7 @@ namespace ArtificialNeuralNetwork
 	     * @return double result
 	     */
 	    protected double Function(double x) {
-		    var result = 1/(1 + Math.Exp(-x*1));
+		    var result = 1/(1 + Math.Exp(-x*1.225));
             return result;
 	    }
 	
@@ -84,7 +84,7 @@ namespace ArtificialNeuralNetwork
 	     * @return double result
 	     */
 	    protected double Derivative(double x) {
-            var result = Math.Exp(-x) / ((1 + Math.Exp(-x * 1)) * (1 + Math.Exp(-x * 1)));
+            var result = Math.Exp(-x) / ((1 + Math.Exp(-x * 1.125)) * (1 + Math.Exp(-x * 1.125)));
             return result;
 	    }
 
