@@ -8,20 +8,34 @@ namespace ArtificialNeuralNetwork
 {
     public class Optimizer
     {
-        public const int UpperLimitLayers = 1;
-        public const int LowerLimitLayers = 1;
-        public const int UpperLimitNeuronsInLayer = 6;
-        public const int LowerLimitNeuronsInLayer = 6;
-        public const int UpperLimitEpochs = 2000;
-        public const int LowerLimitEpochs = 2000;
-        public const double UpperLimitTargetError = 0.005;
-        public const double LowerLimitTargetError = 0.005;
-        public const double TargetErrorStep = 0.005;
-        public List<Network.TrainingAlgorithm> Algorithms;
+        public int UpperLimitLayers;
+        public int LowerLimitLayers;
+        public int UpperLimitNeuronsInLayer;
+        public int LowerLimitNeuronsInLayer;
+        public int UpperLimitEpochs;
+        public int LowerLimitEpochs;
+        public double UpperLimitTargetError;
+        public double LowerLimitTargetError;
+        public double TargetErrorStep;
+        public List<TrainingAlgorithmFactory.TrainingAlgorithmType> Algorithms;
+
+        public Optimizer()
+        {
+            UpperLimitLayers = 1;
+            LowerLimitLayers = 1;
+            UpperLimitNeuronsInLayer = 1;
+            LowerLimitNeuronsInLayer = 1;
+            UpperLimitEpochs = 2000;
+            LowerLimitEpochs = 2000;
+            UpperLimitTargetError = 0.005;
+            LowerLimitTargetError = 0.005;
+            TargetErrorStep = 0.005;
+            Algorithms = new List<TrainingAlgorithmFactory.TrainingAlgorithmType>();
+        }
 
         public string Optimize(Data trainingData, Data testingData, Func<List<double>, List<double>, bool> successCondition, Func<List<double>, List<double>> deconvert)
         {
-            Algorithms = new List<Network.TrainingAlgorithm>() { Network.TrainingAlgorithm.HoldBestInvestigate };// Enum.GetValues(typeof(Network.TrainingAlgorithm)).Cast<Network.TrainingAlgorithm>())
+            Algorithms = new List<TrainingAlgorithmFactory.TrainingAlgorithmType>() { TrainingAlgorithmFactory.TrainingAlgorithmType.HoldBestInvestigate };// Enum.GetValues(typeof(TrainingAlgorithm.TrainingAlgorithmType)).Cast<Network.TrainingAlgorithm>())
             var grapher = new StringBuilder();
             grapher.AppendLine("");
             grapher.AppendLine("Graph data:");
@@ -47,7 +61,7 @@ namespace ArtificialNeuralNetwork
             return grapher.ToString();
         }
 
-        public static string RunTestNetwork(Data trainingData, Data testingData, Func<List<double>, List<double>, bool> successCondition, Func<List<double>, List<double>> deconvert, int numLayers, int perLayer, Network.TrainingAlgorithm algorithm, bool saveReport = true, bool feedforward = true)
+        public static string RunTestNetwork(Data trainingData, Data testingData, Func<List<double>, List<double>, bool> successCondition, Func<List<double>, List<double>> deconvert, int numLayers, int perLayer, TrainingAlgorithmFactory.TrainingAlgorithmType algorithm, bool saveReport = true)
         {
             //Create hidden layers
             var hidden = new List<int>();
@@ -58,15 +72,7 @@ namespace ArtificialNeuralNetwork
             }
 
             //Create Network
-            Network network;
-            if (feedforward)
-            {
-                network = new FeedForwardNetwork(trainingData.Inputs[0].Count, hidden, trainingData.Outputs[0].Count);
-            }
-            else
-            {
-                network = new InterconnectedNetwork(trainingData.Inputs[0].Count, perLayer, trainingData.Outputs[0].Count);
-            }
+            Network network = new Network(trainingData.Inputs[0].Count, hidden, trainingData.Outputs[0].Count);
 
             //Start a stopwatch
             var stopWatch = new Stopwatch();
@@ -74,7 +80,7 @@ namespace ArtificialNeuralNetwork
 
             //Train the network
             network.Train(trainingData.Inputs, trainingData.Outputs, algorithm);
-
+            Console.WriteLine(Utilities.Stringy.XmlSerializeToString(network));
             //Stop the stopwatch
             stopWatch.Stop();
 
@@ -86,7 +92,7 @@ namespace ArtificialNeuralNetwork
             }
             var successes = testingData.Inputs.Select(t => network.Run(t)).Where((result, i) => successCondition(result, testingData.Outputs[i])).Count();
 
-            return String.Format("{0}, {1}|{2}|{3}", numLayers, perLayer,
+            return String.Format("{0}|{1}|{2}|{3}", numLayers, perLayer,
                Math.Round((successes / (double)testingData.Inputs.Count) * 100, 2),
                (double)stopWatch.ElapsedMilliseconds / 1000);
         }
