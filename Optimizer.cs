@@ -39,7 +39,7 @@ namespace ArtificialNeuralNetwork
             var grapher = new StringBuilder();
             grapher.AppendLine("");
             grapher.AppendLine("Graph data:");
-            grapher.AppendLine("Layers|INeurons|Success|Time");
+            grapher.AppendLine("id|Layers|INeurons|Success|Time");
 
             for (var numLayers = LowerLimitLayers; numLayers < UpperLimitLayers + 1; numLayers++)
             {
@@ -80,19 +80,19 @@ namespace ArtificialNeuralNetwork
 
             //Train the network
             network.Train(trainingData.Inputs, trainingData.Outputs, algorithm);
-            Console.WriteLine(Utilities.Stringy.XmlSerializeToString(network));
+            Network.Save(network);
+
             //Stop the stopwatch
             stopWatch.Stop();
 
             //Test
-
             if (saveReport)
             {
                 SaveReport(testingData, successCondition, deconvert, network);
             }
             var successes = testingData.Inputs.Select(t => network.Run(t)).Where((result, i) => successCondition(result, testingData.Outputs[i])).Count();
 
-            return String.Format("{0}|{1}|{2}|{3}", numLayers, perLayer,
+            return String.Format("{0}|{1}|{2}|{3}|{4}", network.Id, numLayers, perLayer,
                Math.Round((successes / (double)testingData.Inputs.Count) * 100, 2),
                (double)stopWatch.ElapsedMilliseconds / 1000);
         }
@@ -111,7 +111,7 @@ namespace ArtificialNeuralNetwork
                     sccss);
             }
 
-            using (var file = new System.IO.StreamWriter("report.txt"))
+            using (var file = new System.IO.StreamWriter("Optimizer/report_" + network.Id + ".txt"))
             {
                 file.WriteLine(report);
             }

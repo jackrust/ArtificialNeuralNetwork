@@ -2,21 +2,29 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace ArtificialNeuralNetwork
 {
+    [Serializable]
     public class Network
     {
+        public string Id = Guid.NewGuid().ToString();
+        public string Details = "";
+
         public static int DefaultMaxEpochs = 1500;
         public static int DefaultMaxMinima = 50;
         public static double DefaultTargetError = 0.005;
+        public static string DefaultDirectory = "Network/";
 
         public int MaxEpochs = DefaultMaxEpochs;
         public int MaxMinima = DefaultMaxMinima;
         public double TargetError = DefaultTargetError;
+        public string Directory = DefaultDirectory;
         public int Epochs;
         public double Error;
-        public bool WeightToRecent = false;
+
         public List<Input> INeurons;
         public List<List<Dynamic>> HLayers;
         public List<Dynamic> ONeurons;
@@ -33,8 +41,8 @@ namespace ArtificialNeuralNetwork
             }
             CreateOutputs(outputsNo);
         }
-	
-	    /**
+
+        /**
 	     * run
 	     * Returns the outputs from the given inputs
 	     * @param inputs, a List<double> of input values
@@ -64,7 +72,6 @@ namespace ArtificialNeuralNetwork
                 return null;
 
             //Pull the output from the output neurons
-
             return ONeurons.Select(o => o.GetOutput()).ToList();
         }
 	
@@ -78,43 +85,6 @@ namespace ArtificialNeuralNetwork
         {
             var algorithm = TrainingAlgorithmFactory.CreateAlgoRithm(trainingAlgorithmType);
             algorithm.Train(this, inputs, targets);
-        }
-
-
-        public static void RecordLog(IEnumerable<List<double>> log)
-        {
-            const string fileName = "Log.txt";
-            var lines = log.Select(l => String.Format("{0},{1},{2},{3},{4}", l[0], l[1], l[2], l[3], l[4])).ToList();
-            var file = new StreamWriter(fileName);
-            foreach (var l in lines)
-            {
-                file.WriteLine(l);
-            }
-            file.Close();
-        }
-
-        public static void RecordRankings(Dictionary<string, double> rankings)
-        {
-
-            const string fileName = "Rankings.txt";
-            var file = new StreamWriter(fileName);
-            foreach (var r in rankings)
-            {
-                file.WriteLine(r.Key + "," + r.Value);
-            }
-            file.Close();
-        }
-
-        public void AdjustLearningRateDown()
-        {
-            foreach (var h in HLayers.SelectMany(l => l))
-            {
-                h.HalveLearningRate();
-            }
-            foreach (var o in ONeurons)
-            {
-                o.HalveLearningRate();
-            }
         }
 
 
@@ -133,7 +103,7 @@ namespace ArtificialNeuralNetwork
                     var err = targets[i][j] - outputs[j];
 
                     //And backpropagate to train the network
-                    Backpropagate(ONeurons[j], err);
+                    ONeurons[j].Backpropagate(err);
                     
                     //Store error for checking
                     Error = Error + Math.Abs(err);
@@ -141,47 +111,8 @@ namespace ArtificialNeuralNetwork
             }
             return Error;
         }
-
-        protected void Backpropagate(Dynamic oNeuron, double err)
-        {
-            oNeuron.Backpropagate(err);
-        }
-
-
-        public List<double> GetWeights()
-        {
-            var weights = new List<double>();
-            foreach (var h in HLayers.SelectMany(l => l))
-            {
-                weights.AddRange(h.GetWeights());
-            }
-            foreach (var o in ONeurons)
-            {
-                weights.AddRange(o.GetWeights());
-            }
-            return weights;
-        }
-
-        public void SetWeights(List<double> weights)
-        {
-            var index = 0;
-            foreach (var l in HLayers)
-            {
-                foreach (var h in l)
-                {
-                    h.SetWeights(weights.GetRange(index, h.Dendrites.Count()));
-                    index += h.Dendrites.Count();
-                }
-            }
-            foreach (var o in ONeurons)
-            {
-                o.SetWeights(weights.GetRange(index, o.Dendrites.Count()));
-                index += o.Dendrites.Count();
-            }
-        }
-
-        //Create
-	
+        
+        #region Create
 	    /**
 	     * createInputs
 	     * sets up the input layer
@@ -195,25 +126,6 @@ namespace ArtificialNeuralNetwork
 		
 		    return true;
 	    }
-
-        public static void PlugIn(List<Dynamic> outputs, List<List<Dynamic>> hiddens, List<Input> inputs)
-        {
-            foreach (var o in outputs)
-            {
-                o.PlugIn(hiddens[0]);
-            }
-            for (var l = 0; l < hiddens.Count - 1; l++)
-            {
-                foreach (var h in hiddens[l])
-                {
-                    h.PlugIn(hiddens[l + 1]);
-                }
-            }
-            foreach (var h in hiddens[hiddens.Count - 1])
-            {
-                h.PlugIn(inputs);
-            }
-        }
 
 	    /**
 	     * createHiddenLayers
@@ -295,9 +207,9 @@ namespace ArtificialNeuralNetwork
             }
 		    return true;
 	    }
-	
-	    //Validate
-	
+        #endregion
+
+	    #region Validate
 	    /**
 	     * inputsValid
 	     * @return true if input layer exists
@@ -336,13 +248,13 @@ namespace ArtificialNeuralNetwork
 	     * outputsValid
 	     * @return true if output layer exists
 	     */
-
         protected bool OutputsValid()
 	    {
             return ONeurons.Count > 0;
 	    }
+        #endregion
 
-        //IO
+        #region Display
 	    /**
 	     * printNetwork
 	     * converts the Network weights to a string
@@ -385,95 +297,104 @@ namespace ArtificialNeuralNetwork
 		
 		    return print;
 	    }
+        #endregion
 
-        /*
-         public int MaxEpochs = DefaultMaxEpochs;
-        public int MaxMinima = DefaultMaxMinima;
-        public double TargetError = DefaultTargetError;
-        public int Epochs;
-        public double Error;
-        public bool WeightToRecent = false;
-        public List<Input> INeurons;
-        public List<List<Dynamic>> HLayers;
-        public List<Dynamic> ONeurons;
-        */
-
-        public string Stringify()
+        #region Setup/Packup
+        public static void Save(Network network)
         {
-            var s = "";
-            s += "<maxEpochs>" + MaxEpochs + "</maxEpochs>";
-            s += "<maxMinima>" + MaxEpochs + "</maxMinima>";
-            s += "<epochs>" + Epochs + "</epochs>";
-            s += "<error>" + Error + "</error>";
-            s += "<targetError>" + TargetError + "</targetError>";
-
-            s += "<iNeurons>";
-            foreach (var n in INeurons)
-            {
-                s += "<iNeuron>";
-                s += n.Stringify();
-                s += "</iNeuron>";
-            }
-            s += "</iNeurons>";
-
-            s += "<hLayers>";
-            foreach (var l in HLayers)
-            {
-                s += "<hLayer>";
-                s += "<hNeurons>";
-                foreach (var n in l)
-                {
-                    s += "<hNeuron>";
-                    s += n.Stringify();
-                    s += "</hNeuron>";
-                }
-                s += "</hNeurons>";
-                s += "</hLayer>";
-            }
-            s += "</hLayers>";
-
-            s += "<oNeurons>";
-            foreach (var n in ONeurons)
-            {
-                s += "<oNeuron>";
-                s += n.Stringify();
-                s += "</oNeuron>";
-            }
-            s += "</oNeurons>";
-            return s;
+            IFormatter formatter = new BinaryFormatter();
+            Stream stream = new FileStream(network.Directory + network.Id + ".ann", FileMode.Create, FileAccess.Write, FileShare.None);
+            formatter.Serialize(stream, network);
+            stream.Close();
         }
-        
-        /*public static Network Objectify(string str)
+
+        public static Network Load(string filename)
         {
-            var numInputs = Convert.ToInt32(Stringy.SplitOn(str, "numInputs")[0]);
-            var numOutputs = Convert.ToInt32(Stringy.SplitOn(str, "numOutputs")[0]);
-            var maxEpochs = Convert.ToInt32(Stringy.SplitOn(str, "maxEpochs")[0]);
-            var epochs = Convert.ToInt32(Stringy.SplitOn(str, "epochs")[0]);
-            var error = Convert.ToInt32(Stringy.SplitOn(str, "error")[0]);
-            var targetError = Convert.ToInt32(Stringy.SplitOn(str, "targetError")[0]);
-
-            var ins = Stringy.SplitOn(Stringy.SplitOn(str, "iNeurons")[0], "iNeuron");
-            var inputs = ins.Select(Input.Objectify).ToList();
-
-            var hls = Stringy.SplitOn(Stringy.SplitOn(str, "hLayers")[0], "hLayer");
-            var hiddenLayers = hls.Select(l => Stringy.SplitOn(Stringy.SplitOn(str, "hNeurons")[0], "hNeuron")).Select(hns => hns.Select(Dynamic.Objectify).ToList()).ToList();
-
-            var ons = Stringy.SplitOn(Stringy.SplitOn(str, "oNeurons")[0], "oNeuron");
-            var outputs = ons.Select(Dynamic.Objectify).ToList();
-
-            PlugIn(outputs, hiddenLayers, inputs);
-
-            return new Network(numInputs, numOutputs, maxEpochs, targetError, epochs,
-                error, inputs, hiddenLayers, outputs);
+            IFormatter formatter = new BinaryFormatter();
+            Stream stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var obj = (Network)formatter.Deserialize(stream);
+            stream.Close();
+            return obj;
         }
 
         public static Network Copy(Network orig)
         {
-            return new Network(orig.Inputs, orig.Outputs, orig.MaxEpochs, orig.TargetError, orig.Epochs, orig.Error,
-                Input.Copy(orig.INeurons), Dynamic.Copy(orig.HLayers), Dynamic.Copy(orig.ONeurons));
-        }*/
+            var network = new Network(orig.INeurons.Count, orig.HLayers.Select(l => l.Count).ToList(), orig.ONeurons.Count);
+            var inputs = Input.Copy(orig.INeurons);
+            var hiddenLayers = Dynamic.Copy(orig.HLayers);
+            var outputs = Dynamic.Copy(orig.ONeurons);
+
+            PlugIn(outputs, hiddenLayers, inputs);
+            network.Id = orig.Id;
+            network.Details = orig.Details;
+
+            network.MaxEpochs = orig.MaxEpochs;
+            network.MaxMinima = orig.MaxMinima;
+            network.TargetError = orig.TargetError;
+            network.Epochs = orig.Epochs;
+            network.Error = orig.Error;
+
+            network.INeurons = inputs;
+            network.HLayers = hiddenLayers;
+            network.ONeurons = outputs;
+
+            return network;
+        }
+
+        public List<double> GetWeights()
+        {
+            var weights = new List<double>();
+            foreach (var h in HLayers.SelectMany(l => l))
+            {
+                weights.AddRange(h.GetWeights());
+            }
+            foreach (var o in ONeurons)
+            {
+                weights.AddRange(o.GetWeights());
+            }
+            return weights;
+        }
+
+        public void SetWeights(List<double> weights)
+        {
+            var index = 0;
+            foreach (var l in HLayers)
+            {
+                foreach (var h in l)
+                {
+                    h.SetWeights(weights.GetRange(index, h.Dendrites.Count()));
+                    index += h.Dendrites.Count();
+                }
+            }
+            foreach (var o in ONeurons)
+            {
+                o.SetWeights(weights.GetRange(index, o.Dendrites.Count()));
+                index += o.Dendrites.Count();
+            }
+        }
+
+        public static void PlugIn(List<Dynamic> outputs, List<List<Dynamic>> hiddens, List<Input> inputs)
+        {
+            foreach (var o in outputs)
+            {
+                o.PlugIn(hiddens[0]);
+            }
+            for (var l = 0; l < hiddens.Count - 1; l++)
+            {
+                foreach (var h in hiddens[l])
+                {
+                    h.PlugIn(hiddens[l + 1]);
+                }
+            }
+            foreach (var h in hiddens[hiddens.Count - 1])
+            {
+                h.PlugIn(inputs);
+            }
+        }
+        #endregion
 
 
+        #region Analysis
         public List<NeuralPathway> GetPathways()
         {
             var pathways = new List<NeuralPathway>();
@@ -506,10 +427,11 @@ namespace ArtificialNeuralNetwork
                     {
                         rankings.Add(i.Name, p.WeightingProduct());
                     }
-                    
+
                 }
             }
             return rankings;
         }
+        #endregion
     }
 }

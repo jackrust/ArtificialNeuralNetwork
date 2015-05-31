@@ -4,6 +4,7 @@ using System.Linq;
 
 namespace ArtificialNeuralNetwork
 {
+    [Serializable]
     public abstract class Neuron
     {
 
@@ -49,7 +50,7 @@ namespace ArtificialNeuralNetwork
             Dendrites = dendrites;
             Name = name;
             Threshold = threshold;
-            if (name != "B")
+            if (name != "B" && dendrites.All(d => d.Neuron.Name != "B"))
                 Dendrites.Add(new Dendrite(new Bias()));
         }
 
@@ -82,9 +83,8 @@ namespace ArtificialNeuralNetwork
             var output = new List<Neuron>();
             foreach (var i in input)
             {
-                var temp = i as Input;
-                if (temp != null)
-                    output.Add(Input.Copy(temp));
+                if (i.Name.ToUpper().Contains("I"))
+                    output.Add(Input.Copy((Input)i));
                 else
                     output.Add(Dynamic.Copy((Dynamic)i));
             }

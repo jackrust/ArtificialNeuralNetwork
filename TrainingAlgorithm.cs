@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using Utilities;
 
 namespace ArtificialNeuralNetwork
 {
@@ -40,6 +42,18 @@ namespace ArtificialNeuralNetwork
     public abstract class TrainingAlgorithm
     {
         public abstract void Train(Network network, List<List<double>> inputs, List<List<double>> targets);
+
+        protected static void AdjustLearningRateDown(Network network)
+        {
+            foreach (var h in network.HLayers.SelectMany(l => l))
+            {
+                h.HalveLearningRate();
+            }
+            foreach (var o in network.ONeurons)
+            {
+                o.HalveLearningRate();
+            }
+        }
     }
 
     public class TrainingAlgorithmNormal : TrainingAlgorithm
@@ -111,7 +125,7 @@ namespace ArtificialNeuralNetwork
 
                 if (network.Error > prevError)
                 {
-                    network.AdjustLearningRateDown();
+                    AdjustLearningRateDown(network);
                 }
                 prevError = network.Error;
             } while (network.Error > network.TargetError && minima < network.MaxMinima &&
@@ -152,15 +166,15 @@ namespace ArtificialNeuralNetwork
 
                 if (network.Error > prevError)
                 {
-                    network.AdjustLearningRateDown();
+                    AdjustLearningRateDown(network);
                 }
                 prevError = network.Error;
                 log.Add(new List<double>() {network.Epochs, minima, network.Error, minError, maxError});
             } while (network.Error > network.TargetError && minima < network.MaxMinima && network.Epochs < network.MaxEpochs);
             network.SetWeights(bestWeights);
-            Network.RecordLog(log);
+            Filey.Save(log, "Network/Algorithm/Log.txt");
             var rankings = network.RankInputs();
-            Network.RecordRankings(rankings);
+            Filey.Save(rankings, "Network/Algorithm/Rankings.txt");
         }
     }
 }

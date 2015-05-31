@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Utilities;
 
 namespace ArtificialNeuralNetwork
 {
+    [Serializable]
     public class Dynamic:Neuron
     {
         public static double MinLearningRate = 1.0 / Math.Pow(2.0, 8.0);
         public static double MaxLearningRate = 0.4;
-        //TODO:Add momentum
         public double LearningRate = MaxLearningRate;
 
 	    public Dynamic() {}
@@ -117,37 +116,6 @@ namespace ArtificialNeuralNetwork
                     d.Neuron = n;
                 }
             }
-        }
-
-        public string Stringify()
-        {
-            var s = "";
-            s += "<threshold>" + Threshold + "</threshold>";
-            s += "<name>" + Name + "</name>";
-
-            s += "<dendrites>";
-            foreach (var d in Dendrites)
-            {
-                s += "<dendrite>";
-                s += d.Stringify();
-                s += "</dendrite>";
-            }
-            s += "</dendrite>";
-            return s;
-        }
-
-        public static Dynamic Objectify(string str)
-        {
-            var threshold = Convert.ToDouble(Stringy.SplitOn(str, "threshold")[0]);
-            var name = Stringy.SplitOn(str, "name")[0];
-
-            var ds = Stringy.SplitOn(Stringy.SplitOn(str, "dendrites")[0], "dendrite");
-            var dendrites = new List<Dendrite>();
-            for (var d = 0; d < ds.Count(); d++ )
-            {
-                dendrites[d] = Dendrite.Objectify(ds[d]);
-            }
-            return new Dynamic(dendrites, name, threshold);
         }
 
         internal static List<List<Dynamic>> Copy(List<List<Dynamic>> input)

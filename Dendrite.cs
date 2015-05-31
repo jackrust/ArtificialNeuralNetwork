@@ -5,6 +5,7 @@ using Utilities;
 
 namespace ArtificialNeuralNetwork
 {
+    [Serializable]
     public class Dendrite
     {
         public static Random Random = new Random();
@@ -29,26 +30,6 @@ namespace ArtificialNeuralNetwork
         public double GetWeightedOutput(NeuralPathway path = null)
         {
             return Weight * Neuron.GetOutput(path);
-        }
-
-        public string Stringify()
-        {
-            String s = "";
-            s += "<neuron>" + Neuron + "</neuron>";
-            s += "<weight>" + Weight + "</weight>";
-            return s;
-        }
-
-        public static Dendrite Objectify(string str)
-        {
-            String n = Stringy.SplitOn(str, "neuron")[0];
-            Neuron neuron;
-            if (n.IndexOf("value", StringComparison.Ordinal)>-1)
-                neuron = (Dynamic.Objectify(n));
-            else
-                neuron = (Input.Objectify(n));
-            int weight = Convert.ToInt32(Stringy.SplitOn(str, "weight")[0]);
-            return new Dendrite(neuron, weight);
         }
 
         public static List<Dendrite> Copy(List<Dendrite> input)
