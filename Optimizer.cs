@@ -25,8 +25,8 @@ namespace ArtificialNeuralNetwork
             LowerLimitLayers = 1;
             UpperLimitNeuronsInLayer = 1;
             LowerLimitNeuronsInLayer = 1;
-            UpperLimitEpochs = 2000;
-            LowerLimitEpochs = 2000;
+            UpperLimitEpochs = 1000;
+            LowerLimitEpochs = 1000;
             UpperLimitTargetError = 0.005;
             LowerLimitTargetError = 0.005;
             TargetErrorStep = 0.005;
@@ -51,7 +51,7 @@ namespace ArtificialNeuralNetwork
                         {
                             foreach (var algorithm in Algorithms )
                             {
-                                grapher.AppendLine(RunTestNetwork(trainingData, testingData, successCondition, deconvert, numLayers, perLayer, algorithm, false));
+                                grapher.AppendLine(RunTestNetwork(trainingData, testingData, successCondition, deconvert, numLayers, perLayer, epoch, algorithm, false));
                                 Console.WriteLine(grapher.ToString());
                             }
                         }
@@ -61,7 +61,7 @@ namespace ArtificialNeuralNetwork
             return grapher.ToString();
         }
 
-        public static string RunTestNetwork(Data trainingData, Data testingData, Func<List<double>, List<double>, bool> successCondition, Func<List<double>, List<double>> deconvert, int numLayers, int perLayer, TrainingAlgorithmFactory.TrainingAlgorithmType algorithm, bool saveReport = true)
+        public static string RunTestNetwork(Data trainingData, Data testingData, Func<List<double>, List<double>, bool> successCondition, Func<List<double>, List<double>> deconvert, int numLayers, int perLayer, int epoch, TrainingAlgorithmFactory.TrainingAlgorithmType algorithm, bool saveReport = true)
         {
             //Create hidden layers
             var hidden = new List<int>();
@@ -72,14 +72,14 @@ namespace ArtificialNeuralNetwork
             }
 
             //Create Network
-            Network network = new Network(trainingData.Inputs[0].Count, hidden, trainingData.Outputs[0].Count);
-
+            Network network = new Network(trainingData.DataPoints[0].Inputs.Count, hidden, trainingData.DataPoints[0].Outputs.Count);
+            network.MaxEpochs = epoch;
             //Start a stopwatch
             var stopWatch = new Stopwatch();
             stopWatch.Start();
 
             //Train the network
-            network.Train(trainingData.Inputs, trainingData.Outputs, algorithm);
+            network.Train(trainingData.Inputs(), trainingData.Outputs(), algorithm);
             Network.Save(network);
 
             //Stop the stopwatch
@@ -90,24 +90,24 @@ namespace ArtificialNeuralNetwork
             {
                 SaveReport(testingData, successCondition, deconvert, network);
             }
-            var successes = testingData.Inputs.Select(t => network.Run(t)).Where((result, i) => successCondition(result, testingData.Outputs[i])).Count();
+            var successes = testingData.Inputs().Select(t => network.Run(t)).Where((result, i) => successCondition(result, testingData.DataPoints[i].Outputs)).Count();
 
             return String.Format("{0}|{1}|{2}|{3}|{4}", network.Id, numLayers, perLayer,
-               Math.Round((successes / (double)testingData.Inputs.Count) * 100, 2),
+               Math.Round((successes / (double)testingData.DataPoints.Count) * 100, 2),
                (double)stopWatch.ElapsedMilliseconds / 1000);
         }
 
         private static void SaveReport(Data testingData, Func<List<double>, List<double>, bool> successCondition, Func<List<double>, List<double>> deconvert, Network network)
         {
             var report = "";
-            for (var i = 0; i < testingData.Inputs.Count; i++)
+            for (var i = 0; i < testingData.DataPoints.Count; i++)
             {
-                var output = network.Run(testingData.Inputs[i]);
-                var sccss = successCondition(output, testingData.Outputs[i]) ? 1 : 0;
+                var output = network.Run(testingData.DataPoints[i].Inputs);
+                var sccss = successCondition(output, testingData.DataPoints[i].Outputs) ? 1 : 0;
                 report = String.Format("{0}|i{1}|o{2}|t{3}|s|{4}\n", i,
-                    testingData.Inputs[i].Aggregate(report, (current, inpt) => current + ("|" + inpt)),
+                    testingData.DataPoints[i].Inputs.Aggregate(report, (current, inpt) => current + ("|" + inpt)),
                     deconvert(output).Aggregate(report, (current, otpt) => current + ("|" + otpt)),
-                    deconvert(testingData.Outputs[i]).Aggregate(report, (current, trgt) => current + ("|" + trgt)),
+                    deconvert(testingData.DataPoints[i].Outputs).Aggregate(report, (current, trgt) => current + ("|" + trgt)),
                     sccss);
             }
 

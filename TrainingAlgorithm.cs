@@ -156,7 +156,7 @@ namespace ArtificialNeuralNetwork
                 {
                     minima = 0;
                     minError = network.Error;
-                    bestWeights = network.GetWeights();
+                    Network.Save(network);
                 }
 
                 if (network.Error > maxError)
@@ -171,7 +171,8 @@ namespace ArtificialNeuralNetwork
                 prevError = network.Error;
                 log.Add(new List<double>() {network.Epochs, minima, network.Error, minError, maxError});
             } while (network.Error > network.TargetError && minima < network.MaxMinima && network.Epochs < network.MaxEpochs);
-            network.SetWeights(bestWeights);
+            //TODO:check that hold best is working - it looked like maybe accuracy was dropping over time
+            network = Network.Load(network.Directory + network.Id + ".ann");
             Filey.Save(log, "Network/Algorithm/Log.txt");
             var rankings = network.RankInputs();
             Filey.Save(rankings, "Network/Algorithm/Rankings.txt");

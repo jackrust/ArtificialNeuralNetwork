@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Xml;
 
 namespace ArtificialNeuralNetwork
 {
@@ -400,12 +401,19 @@ namespace ArtificialNeuralNetwork
             var pathways = new List<NeuralPathway>();
             foreach (var o in ONeurons)
             {
-                var path = new NeuralPathway();
-                path.Path.Add(o);
-                path.Weightings.Add(1);
-                var paths = o.ExtendPathway(path);
-                pathways.AddRange(paths);
+                GetPathways(o);
             }
+            return pathways;
+        }
+
+        public List<NeuralPathway> GetPathways(Dynamic o)
+        {
+            var pathways = new List<NeuralPathway>();
+            var path = new NeuralPathway();
+            path.Path.Add(o);
+            path.Weightings.Add(1);
+            var paths = o.ExtendPathway(path);
+            pathways.AddRange(paths);
             return pathways;
         }
 
