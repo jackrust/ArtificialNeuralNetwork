@@ -43,6 +43,26 @@ namespace ArtificialNeuralNetwork
             CreateOutputs(outputsNo);
         }
 
+        public static Network CreateNetwork(Data trainingData, int numLayers, int perLayer, TrainingAlgorithmFactory.TrainingAlgorithmType algorithm)
+        {
+            //Create hidden layers
+            var hidden = new List<int>();
+
+            for (var i = 0; i < numLayers; i++)
+            {
+                hidden.Add(perLayer);
+            }
+
+            //Create Network
+            var network = new Network(trainingData.DataPoints[0].Inputs.Count, hidden, trainingData.DataPoints[0].Outputs.Count);
+            //New network with 5 inputs, One hidden layer of 2 neurons, 1 output
+
+            //Train the network
+            network.Train(trainingData.Inputs(), trainingData.Outputs(), algorithm);
+
+            return network;
+        }
+
         /**
 	     * run
 	     * Returns the outputs from the given inputs
