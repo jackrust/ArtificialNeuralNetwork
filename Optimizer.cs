@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using ArtificialNeuralNetwork.DataManagement;
 
 namespace ArtificialNeuralNetwork
 {
@@ -14,10 +15,12 @@ namespace ArtificialNeuralNetwork
         public int LowerLimitNeuronsInLayer;
         public int UpperLimitEpochs;
         public int LowerLimitEpochs;
+        public int EpochsStep;
         public double UpperLimitTargetError;
         public double LowerLimitTargetError;
         public double TargetErrorStep;
         public List<TrainingAlgorithmFactory.TrainingAlgorithmType> Algorithms;
+        public List<Func<Data, Tuple<Data, Data>>> TrainingTestingDataDelineationCallbacks; 
 
         public Optimizer()
         {
@@ -27,32 +30,47 @@ namespace ArtificialNeuralNetwork
             LowerLimitNeuronsInLayer = 1;
             UpperLimitEpochs = 1000;
             LowerLimitEpochs = 1000;
+            EpochsStep = 250;
             UpperLimitTargetError = 0.005;
             LowerLimitTargetError = 0.005;
             TargetErrorStep = 0.005;
-            Algorithms = new List<TrainingAlgorithmFactory.TrainingAlgorithmType>();
+            Algorithms = new List<TrainingAlgorithmFactory.TrainingAlgorithmType>() { TrainingAlgorithmFactory.TrainingAlgorithmType.HoldBestInvestigate };
+            // Enum.GetValues(typeof(TrainingAlgorithm.TrainingAlgorithmType)).Cast<Network.TrainingAlgorithm>())
+            TrainingTestingDataDelineationCallbacks = new List<Func<Data, Tuple<Data, Data>>>()
+            {
+                TrainingTestingDataDelineationDefaultImplementation
+            };
         }
 
-        public string Optimize(Data trainingData, Data testingData, Func<List<double>, List<double>, bool> successCondition, Func<List<double>, List<double>> deconvert)
+        public string Optimize(Data data, Func<List<double>, List<double>, bool> successCondition, Func<List<double>, List<double>> deconvert)
         {
-            Algorithms = new List<TrainingAlgorithmFactory.TrainingAlgorithmType>() { TrainingAlgorithmFactory.TrainingAlgorithmType.HoldBestInvestigate };// Enum.GetValues(typeof(TrainingAlgorithm.TrainingAlgorithmType)).Cast<Network.TrainingAlgorithm>())
             var grapher = new StringBuilder();
             grapher.AppendLine("");
             grapher.AppendLine("Graph data:");
-            grapher.AppendLine("id|Layers|INeurons|Success|Time");
+            grapher.AppendLine("id|Layers|Neurons|Epochs|Algorithm|Callback|Success|Time");
+            var algorithmCount = 0;
+            var callbackCount = 0;
 
             for (var numLayers = LowerLimitLayers; numLayers < UpperLimitLayers + 1; numLayers++)
             {
                 for (var perLayer = LowerLimitNeuronsInLayer; perLayer < (numLayers > 0 ? UpperLimitNeuronsInLayer + 1 : 2); perLayer++)
                 {
-                    for (var epoch = LowerLimitEpochs; epoch < UpperLimitEpochs + 1; epoch++)
+                    for (var epoch = LowerLimitEpochs; epoch < UpperLimitEpochs + 1; epoch+=EpochsStep)
                     {
                         for (var err = LowerLimitTargetError; err < UpperLimitTargetError + 1; err++)
                         {
+                            algorithmCount = 0;
                             foreach (var algorithm in Algorithms )
                             {
-                                grapher.AppendLine(RunTestNetwork(trainingData, testingData, successCondition, deconvert, numLayers, perLayer, epoch, algorithm, false));
-                                Console.WriteLine(grapher.ToString());
+                                algorithmCount++;
+                                callbackCount = 0;
+                                foreach (var dataDelineationCallback in TrainingTestingDataDelineationCallbacks)
+                                {
+                                    callbackCount++;
+                                    grapher.AppendLine(RunTestNetwork(data, successCondition,
+                                        deconvert, numLayers, perLayer, epoch,algorithmCount, callbackCount, algorithm, dataDelineationCallback, false));
+                                    Console.WriteLine(grapher.ToString());
+                                }
                             }
                         }
                     }
@@ -61,8 +79,13 @@ namespace ArtificialNeuralNetwork
             return grapher.ToString();
         }
 
-        public static string RunTestNetwork(Data trainingData, Data testingData, Func<List<double>, List<double>, bool> successCondition, Func<List<double>, List<double>> deconvert, int numLayers, int perLayer, int epoch, TrainingAlgorithmFactory.TrainingAlgorithmType algorithm, bool saveReport = true)
+        public static string RunTestNetwork(Data data, Func<List<double>, List<double>, bool> successCondition, Func<List<double>, List<double>> deconvert, int numLayers, int perLayer, int epoch, int algorithmNumber, int callbackNumber, TrainingAlgorithmFactory.TrainingAlgorithmType algorithm, Func<Data, Tuple<Data, Data>> dataDelineationCallback, bool saveReport = true)
         {
+            //Deliniate data
+            var dataTuple = dataDelineationCallback(data);
+            var trainingData = dataTuple.Item1;
+            var testingData = dataTuple.Item2;
+
             //Create hidden layers
             var hidden = new List<int>();
 
@@ -92,7 +115,7 @@ namespace ArtificialNeuralNetwork
             }
             var successes = testingData.Inputs().Select(t => network.Run(t)).Where((result, i) => successCondition(result, testingData.DataPoints[i].Outputs)).Count();
 
-            return String.Format("{0}|{1}|{2}|{3}|{4}", network.Id, numLayers, perLayer,
+            return String.Format("{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7}", network.Id, numLayers, perLayer, epoch, algorithmNumber, callbackNumber,
                Math.Round((successes / (double)testingData.DataPoints.Count) * 100, 2),
                (double)stopWatch.ElapsedMilliseconds / 1000);
         }
@@ -115,6 +138,22 @@ namespace ArtificialNeuralNetwork
             {
                 file.WriteLine(report);
             }
+        }
+
+        private static Tuple<Data, Data> TrainingTestingDataDelineationDefaultImplementation(Data data)
+        {
+            const double trainingRatio = 0.75;
+            //scenario is irrelevant here
+            var training = new Data();
+            var testing = new Data();
+            var count = data.DataPoints.Count;
+
+            training.DataPoints = data.DataPoints.GetRange(0, (int) Math.Floor(count*trainingRatio));
+            training.SuccessCondition = data.SuccessCondition;
+            testing.DataPoints = data.DataPoints.GetRange(training.DataPoints.Count, count - training.DataPoints.Count);
+            testing.SuccessCondition = data.SuccessCondition;
+
+            return new Tuple<Data, Data>(training, testing);
         }
     }
 }

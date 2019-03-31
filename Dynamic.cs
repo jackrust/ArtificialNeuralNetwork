@@ -12,7 +12,7 @@ namespace ArtificialNeuralNetwork
         public double LearningRate = MaxLearningRate;
 
 	    public Dynamic() {}
-	    public Dynamic(List<Neuron> inputs):base(inputs) {}
+	    public Dynamic(IEnumerable<Neuron> inputs):base(inputs) {}
 	    public Dynamic(String name):base(name) {}
 
         public Dynamic(List<Dendrite> dendrites, String name, double threshold)

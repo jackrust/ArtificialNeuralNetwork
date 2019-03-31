@@ -43,7 +43,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bias.cs" />
-    <Compile Include="Data.cs" />
+    <Compile Include="DataManagement\Data.cs" />
+    <Compile Include="DataManagement\DataFacade.cs" />
+    <Compile Include="DataManagement\DataFacadeGrouped.cs" />
     <Compile Include="Dendrite.cs" />
     <Compile Include="Dynamic.cs" />
     <Compile Include="TrainingAlgorithm.cs" />

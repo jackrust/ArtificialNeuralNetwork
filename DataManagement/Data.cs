@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ArtificialNeuralNetwork
+namespace ArtificialNeuralNetwork.DataManagement
 {
     public class Data
     {
         public List<DataPoint> DataPoints;
-        public Func<List<double>, List<double>, bool, bool> SuccessCondition;
+        //Todo, should this live here?
+        public Func<List<double>, List<double>, string, bool> SuccessCondition;
 
         public Data()
         {
@@ -25,7 +26,7 @@ namespace ArtificialNeuralNetwork
 
     public class DataPoint
     {
-        public string Reference;
+        public object Reference;
         public List<double> Inputs;
         public List<double> Outputs;
 

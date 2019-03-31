@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Xml;
+using ArtificialNeuralNetwork.DataManagement;
 
 namespace ArtificialNeuralNetwork
 {
@@ -57,8 +57,9 @@ namespace ArtificialNeuralNetwork
             var network = new Network(trainingData.DataPoints[0].Inputs.Count, hidden, trainingData.DataPoints[0].Outputs.Count);
             //New network with 5 inputs, One hidden layer of 2 neurons, 1 output
 
+            //TODO: Training should be a seperate call <- this might explain the over fitting aswell
             //Train the network
-            network.Train(trainingData.Inputs(), trainingData.Outputs(), algorithm);
+            //network.Train(trainingData.Inputs(), trainingData.Outputs(), algorithm);
 
             return network;
         }
@@ -71,7 +72,7 @@ namespace ArtificialNeuralNetwork
 	     */
 	    public List<double> Run(List<double> inputs) {
 		    //If inputs and/or outputs aren't set up then bail now
-		    if(!InputsValid(inputs) || !OutputsValid())
+            if (inputs.Count != INeurons.Count || !(ONeurons.Count > 0))
 			    return null;
 		
 		    //Load input values into the input neurons
@@ -89,7 +90,7 @@ namespace ArtificialNeuralNetwork
         protected List<double> Run()
         {
             //If inputs and/or outputs aren't set up then bail now
-            if (!InputsValid() || !OutputsValid())
+            if (!(INeurons.Count > 0) || !(ONeurons.Count > 0))
                 return null;
 
             //Pull the output from the output neurons
@@ -117,6 +118,7 @@ namespace ArtificialNeuralNetwork
             {
                 //get the output List for the given input List
                 var outputs = Run(inputs[i]);
+
                 //For each of the output values
                 for (var j = 0; j < outputs.Count; j++)
                 {
@@ -170,7 +172,7 @@ namespace ArtificialNeuralNetwork
 	     * @prereq createInputs, createHiddenLayers
 	     */
 	    public bool CreateHiddenLayer(int layer, int num) {
-		    if(!InputsValid() || layer < 1 || num < 1)
+            if (!(INeurons.Count > 0) || layer < 1 || num < 1)
 			    return false;
             HLayers[layer - 1] = new List<Dynamic>();
 		    //add 'num' neurons to hidden layer 'layer'
@@ -203,7 +205,7 @@ namespace ArtificialNeuralNetwork
 	     * @prereq createInputs, createHiddenLayers, createHiddenLayer
 	     */
 	    public bool CreateOutputs(int num){
-		    if(!InputsValid() || !HiddenLayersValid())
+            if (!(INeurons.Count > 0) || !HiddenLayersValid())
 			    return false;
 		
             ONeurons = new List<Dynamic>();
@@ -232,25 +234,6 @@ namespace ArtificialNeuralNetwork
 
 	    #region Validate
 	    /**
-	     * inputsValid
-	     * @return true if input layer exists
-	     */
-        protected bool InputsValid()
-	    {
-	        return INeurons.Count > 0;
-	    }
-
-        /**
-	     * inputsValid
-	     * @param inputs
-	     * @return true if the input layer can accept the given List
-	     */
-        protected bool InputsValid(List<double> inputs)
-        {
-            return inputs.Count == INeurons.Count;
-        }
-	
-	    /**
 	     * hiddenLayersExist
 	     * @return true if hidden layers exist
 	     */
@@ -263,15 +246,6 @@ namespace ArtificialNeuralNetwork
         protected bool HiddenLayersValid()
 	    {
 	        return HLayers.All(layer => layer.All(neuron => neuron != null));
-	    }
-
-        /**
-	     * outputsValid
-	     * @return true if output layer exists
-	     */
-        protected bool OutputsValid()
-	    {
-            return ONeurons.Count > 0;
 	    }
         #endregion
 
