@@ -160,7 +160,7 @@ namespace ArtificialNeuralNetwork
                 {
                     minima = 0;
                     minError = network.Error;
-                    Network.Save(network);
+                    //Network.Save(network); TOTO:reinstate using mongo
                 }
 
                 if (network.Error > maxError)
@@ -177,10 +177,11 @@ namespace ArtificialNeuralNetwork
 
             } while (minima < network.MaxMinima && network.Epochs < network.MaxEpochs);
 
-            network = Network.Load(network.Directory + network.Id + ".ann");
-            Filey.Save(log, "Network/Algorithm/Log.txt");
-            var rankings = network.RankInputs();
-            Filey.Save(rankings, "Network/Algorithm/Rankings.txt");
+            //TODO: reinstate with mongoDB
+            //network = Network.Load(network.Directory + network.Id + ".ann");
+            //Filey.Save(log, "Network/Algorithm/Log.txt");
+            //var rankings = network.RankInputs();
+            //Filey.Save(rankings, "Network/Algorithm/Rankings.txt");
         }
     }
 
@@ -206,7 +207,7 @@ namespace ArtificialNeuralNetwork
                 {
                     minima = 0;
                     minError = network.Error;
-                    Network.Save(network);
+                    //Network.Save(network); //TODO: reinstate using mongodb
                 }
 
                 if (network.Error > maxError)
